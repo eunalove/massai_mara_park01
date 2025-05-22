@@ -4,6 +4,7 @@ on:
 
 jobs:
   build:
+    name: build JAR
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
@@ -39,6 +40,8 @@ jobs:
             sleep 30 # stand by 30sec
 
   test:
+    name: app test
+    needs: deploy
     runs-on: ubuntu-22.04
     steps:
       - name: run automated test #1
