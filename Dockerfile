@@ -4,7 +4,7 @@ FROM gradle:8.12-jdk17-alpine AS build
 WORKDIR /app
 
 # gradle 캐시를 활용하기 위해 필요한 파일 먼저 복사
-COPY build.gradle settings.gradle .
+COPY build.gradle settings.gradle ./
 COPY gradle ./gradle
 RUN gradle dependencies --no-daemon
 
