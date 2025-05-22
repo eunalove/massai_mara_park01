@@ -48,4 +48,4 @@ jobs:
       - name: run automated test #1
         run: |
             curl http://localhost:8080/animal || exit 1
-            sleep 5 # stand by 5sec
+            sleep 5 # stand by 5 sec
