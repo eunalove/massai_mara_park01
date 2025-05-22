@@ -27,6 +27,9 @@ jobs:
       - name: list build/libs directory
         run: ls -al ./build/libs
 
+      - name: Fix jar permission
+        run: chmod +r build/libs/*.jar
+
       - name: run springboot application
         run: |
             java -jar build/libs/massai-mara-park-0.0.1-SNAPSHOT.jar &
