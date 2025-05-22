@@ -28,8 +28,11 @@ jobs:
       - name: list build/libs directory
         run: ls -al ./build/libs
 
-      - name: Fix jar permission
-        run: chmod +r build/libs/*.jar
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: application.jar
+          path: build/libs/*SNAPSHOT.jar
 
   deploy:
     runs-on: ubuntu-22.04
@@ -37,7 +40,7 @@ jobs:
     steps:
       - name: run springboot application
         run: |
-            java -jar build/libs/massai-mara-park-0.0.1-SNAPSHOT.jar &
+            java -jar build/libs/massai-mara-park-0.0.1-SNAPSHOT.jar & || exit 1
             sleep 30 # stand by 30sec
 
   test:
