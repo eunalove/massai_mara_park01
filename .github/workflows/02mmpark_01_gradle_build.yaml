@@ -1,4 +1,4 @@
-name: massai mara park 01 gralde build
+name: massai mara park 01 gradle build
 on:
   workflow_dispatch
 
