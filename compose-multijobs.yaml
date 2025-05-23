@@ -1,0 +1,8 @@
+
+
+services:
+   app:
+      image: eunadocker/massai_mara:latest
+      container_name: massai_mara_app
+      ports:
+        - "8080:8080"
