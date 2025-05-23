@@ -1,53 +1,48 @@
 name: Test EC2 Connection with GHA
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
 
 jobs:
-    test-ec2-connect:
-        name: Test EC2 Connection
-        runs-on: ubuntu-22.04
+  test-ec2-connect:
+    name: Test EC2 Connection
+    runs-on: ubuntu-22.04
+    env:
+      HOSTNAME: 3.80.226.48
+      USER_NAME: ubuntu
 
-        steps:
-            - name: setup SSH Directory
-              run: |
-                mkdir -p ~/.ssh
-                chmod 700 ~/.ssh
+    steps:
+      - name: Setup SSH directory
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
 
-            - name: maek private key file
-              run: |
-                echo "${{ secrets.EC2_PRIVATEKEY }}" > ~/.ssh/ec2_key
-                chmod 700 ~/.ssh/ec2_key
+      - name: Make private key file
+        run: |
+          echo "${{ secrets.EC2_PRIVATEKEY }}" > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
 
-            - name: Test SSH Connect to EC2
-              env:
-                HOSTNAME: 3.80.226.48
-                USER_NAME: ubuntu
-              run: |
-                ssh -vvv -o StrictHostKeyChecking=no -o "UserKnownHostsFile=/dev/null" \
-                -i ~/.ssh/ec2_key -p 22 \
-                ${USER_NAME}@${HOSTNAME} '
-                
-                   echo "현재 사용자: $(whoami)"
-                   echo "호스트명: $(hostname)"
-                   echo "현재시간: $(date)"
-                   echo "메모리사용량"
-                   free -h
+      - name: Test SSH connect to EC2
+        run: |
+          ssh -vvv -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+          -i ~/.ssh/ec2_key -p 22 \
+          ${{ env.USER_NAME }}@${{ env.HOSTNAME }} << 'EOF'
+            echo "현재 사용자: $(whoami)"
+            echo "호스트명: $(hostname)"
+            echo "현재 시간: $(date)"
+            echo "메모리 사용량:"
+            free -h
+          EOF
+          echo "SSH connection test completed."
 
-                   '
+      - name: Upload README.md via SCP
+        run: |
+          echo "Hello, EC2 SCP" > README.md
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+          -i ~/.ssh/ec2_key -P 22 README.md \
+          ${{ env.USER_NAME }}@${{ env.HOSTNAME }}:~/
 
-                echo "SSH connection test completed."
-
-            - name: upload README.md via SCP
-              run: |
-                scp -o StrictHostKeyChecking=no -o "UserKnownHostsFile=/dev/null" \
-                -i ~/.ssh/ec2_key -P 22 README.md \
-                ${USER_NAME}@${HOSTNAME}:~/README.md
-
-
-            - name: cleanup private key
-              if: always()
-              run: |
-                rm -f ~/.ssh/ec2_key
-
-                
+      - name: Cleanup private key
+        if: always()
+        run: |
+          rm -f ~/.ssh/ec2_key
