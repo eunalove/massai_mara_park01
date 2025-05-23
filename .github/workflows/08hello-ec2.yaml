@@ -50,7 +50,8 @@ jobs:
       - name: Download JAR artifact
         uses: actions/download-artifact@v4
         with:
-          name: application.jar
+          name: *SNAPSHOT.jar
+          path: build/libs/
 
       - name: Setup SSH directory
         run: |
@@ -99,7 +100,8 @@ jobs:
           scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
           -i ~/.ssh/ec2_key -P 22 \
           ${{ env.USER_NAME }}@${{ env.HOSTNAME }} '
-           java -jar ~/massai_mara_park-0.0.1-SNAPSHOT.jar &
+           nohap java -jar ~/massai_mara_park-0.0.1-SNAPSHOT.jar \
+           > app.log 2>&1 < /dev/null &
            '
 
       - name: Cleanup private key
