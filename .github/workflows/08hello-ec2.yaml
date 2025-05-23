@@ -3,13 +3,14 @@ name: Test EC2 Connection with GHA
 on:
   workflow_dispatch:
 
+env:
+  HOSTNAME: 3.80.226.48
+  USER_NAME: ubuntu
+
 jobs:
-  test-ec2-connect:
-    name: Test EC2 Connection
+  build_jar:
+    name: Build JAR
     runs-on: ubuntu-22.04
-    env:
-      HOSTNAME: 3.80.226.48
-      USER_NAME: ubuntu
 
     steps:
       - name: Setup SSH directory
@@ -35,12 +36,71 @@ jobs:
           EOF
           echo "SSH connection test completed."
 
+      - name: Cleanup private key
+        if: always()
+        run: |
+          rm -f ~/.ssh/ec2_key
+
+  deploy_ec2:
+    name: JAR upload to EC2
+    needs: build_jar
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: application.jar
+
+      - name: Setup SSH directory
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+      - name: Make private key file
+        run: |
+          echo "${{ secrets.EC2_PRIVATEKEY }}" > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
+
       - name: Upload README.md via SCP
         run: |
-          echo "Hello, EC2 SCP" > README.md
           scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-          -i ~/.ssh/ec2_key -P 22 README.md \
+          -i ~/.ssh/ec2_key -P 22 *SNAPSHOT.jar \
           ${{ env.USER_NAME }}@${{ env.HOSTNAME }}:~/
+
+      - name: Cleanup private key
+        if: always()
+        run: |
+          rm -f ~/.ssh/ec2_key
+
+  run_test_ec2:
+    name: Run and Test on EC2
+    needs: deploy_ec2
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: application.jar
+
+      - name: Setup SSH directory
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+      - name: Make private key file
+        run: |
+          echo "${{ secrets.EC2_PRIVATEKEY }}" > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
+
+      - name: test SSH connect to EC2
+        run: |
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+          -i ~/.ssh/ec2_key -P 22 \
+          ${{ env.USER_NAME }}@${{ env.HOSTNAME }} '
+           java -jar ~/massai_mara_park-0.0.1-SNAPSHOT.jar &
+           '
 
       - name: Cleanup private key
         if: always()
