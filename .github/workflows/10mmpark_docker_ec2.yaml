@@ -1,0 +1,107 @@
+name: massai mara park 07 docker-compose build
+on:
+  workflow_dispatch
+
+env:
+  DOCKER_USERNAME: eunadocker
+  IMAGE_NAME: massai_mara
+  IMAGE_TAG: v${{ github.run_number}}
+
+jobs:
+  mmpark07_docker_compose_build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: ${{env.DOCKER_USERNAME}}/${{env.IMAGE_NAME}}:${{env.IMAGE_TAG}}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: check image
+        run: |
+          docker image ls
+
+      - name: Run Docker container
+        run: |
+          docker save ${{env.DOCKER_USERNAME}}/${{env.IMAGE_NAME}}:${{env.IMAGE_TAG}} > image.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: image.tar
+
+  hub_push:
+    needs: mmpark07_docker_compose_build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: check downloaded image
+        run: ls -al
+
+      - name: load docker image
+        run: |
+          docker load < image.tar
+
+      - name: login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: docker opration
+        run: |
+          docker push ${{env.DOCKER_USERNAME}}/${{env.IMAGE_NAME}}:${{env.IMAGE_TAG}}
+          docker tag ${{env.DOCKER_USERNAME}}/${{env.IMAGE_NAME}}:${{env.IMAGE_TAG}} \
+          ${{env.DOCKER_USERNAME}}/${{env.IMAGE_NAME}}:latest
+          docker push ${{env.DOCKER_USERNAME}}/${{env.IMAGE_NAME}}:latest
+          docker search ${{env.IMAGE_NAME}}:latest
+
+
+      - name: logout from Docker Hub
+        if: always()
+        run: docker logout
+
+  run_test:
+    needs: hub_push
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: run with docker-compose
+        run: |
+          docker compose -f ./compose-multijobs.yaml up -d
+          sleep 30 # wait 30 seconds
+
+          docker compose ps
+          docker compose logs
+
+      - name: run automated test #1 (root endpoint)
+        run: |
+          curl http://localhost:8080 || exit 1
+          sleep 5 # wait 5 seconds
+
+      - name: run automated test #2 (/images endpoint)
+        run: |
+          curl http://localhost:8080/images || exit 1
+          sleep 5 # wait 5 seconds
+
+      - name: run automated test #3 (/animal endpoint)
+        run: |
+          curl http://localhost:8080/animal || exit 1
+          sleep 5 # wait 5 seconds
