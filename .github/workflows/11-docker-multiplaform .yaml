@@ -4,7 +4,7 @@ on:
   workflow_dispatch
 
 env:
-  DOCKER_USERNAME: siestageek
+  DOCKER_USERNAME: eunadocker
   IMAGE_NAME: massai_mara
   IMAGE_TAG: v${{ github.run_number }}
   HOSTNAME: 3.80.226.48
